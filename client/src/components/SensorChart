@@ -1,0 +1,58 @@
+<template>
+  <div class="chart-box">
+    <h3>{{ name }}</h3>
+    <canvas ref="canvas"></canvas>
+  </div>
+</template>
+
+<script>
+import { Chart } from "chart.js/auto";
+
+export default {
+  props: ["name", "data"],
+  data() {
+    return {
+      chart: null
+    };
+  },
+
+  watch: {
+    data() {
+      if (this.chart) {
+        this.chart.data.labels.push("");
+        this.chart.data.datasets[0].data = this.data;
+        this.chart.update("none");
+      }
+    }
+  },
+
+  mounted() {
+    this.chart = new Chart(this.$refs.canvas, {
+      type: "line",
+      data: {
+        labels: this.data.map(() => ""),
+        datasets: [
+          {
+            label: this.name,
+            data: this.data,
+            borderColor: "blue",
+            borderWidth: 1
+          }
+        ]
+      },
+      options: {
+        animation: false,
+        responsive: true,
+        maintainAspectRatio: false
+      }
+    });
+  }
+};
+</script>
+
+<style>
+.chart-box {
+  margin: 35px 0;
+  height: 300px;
+}
+</style>
