@@ -1,6 +1,6 @@
 <template>
   <div class="chart-box">
-    <h3>{{ name }}</h3>
+    <h3>{{ name }} - {{ metric }} vs time</h3>
     <canvas ref="canvas"></canvas>
   </div>
 </template>
@@ -9,44 +9,59 @@
 import { Chart } from "chart.js/auto";
 
 export default {
-  props: ["name", "data"],
+  props: {
+	name: String,
+	data: Array,
+	metric: String
+  },
   data() {
     return {
       chart: null
     };
   },
-
-  watch: {
-    data() {
-      if (this.chart) {
-        this.chart.data.labels.push("");
-        this.chart.data.datasets[0].data = this.data;
-        this.chart.update("none");
-      }
-    }
+  
+  mounted() {
+	this.renderChart();
   },
 
-  mounted() {
-    this.chart = new Chart(this.$refs.canvas, {
-      type: "line",
-      data: {
-        labels: this.data.map(() => ""),
-        datasets: [
-          {
-            label: this.name,
-            data: this.data,
-            borderColor: "blue",
-            borderWidth: 1
-          }
-        ]
-      },
-      options: {
-        animation: false,
-        responsive: true,
-        maintainAspectRatio: false
+  watch: {
+    data: {
+      handler() {
+		this.updateChart();
+	  },
+	  deep: true
       }
-    });
-  }
+    },
+	
+	methods: {
+		renderChart() {
+			const labels = this.data.map(d => new Date(d.timestamp));
+			const values = this.data.map(d => d[this.metric]);
+		
+			this.chart = new Chart(this.$refs.canvas, {
+				type: "line",
+				data: {
+					labels,
+					datasets: [{
+						label: '${this.metric} vs time',
+						data: values,
+						borderColor: "steelblue",
+						borderWidth: 2,
+						tension: 0.2,
+						pointRadius: 0
+					}]
+				}
+			});
+		},
+		
+		updateChart() {
+			if (!this.chart) return;
+			
+			this.chart.data.labels = this.data.map(d => new Date(d.timestamp));
+			this.chart.data.datasets[0].data = this.data.map(d => d[this.metric]);
+			this.chart.update();
+		}
+	}
 };
 </script>
 

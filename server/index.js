@@ -4,6 +4,7 @@ const cors = require("cors");
 const http = require("http");
 const { Pool, Client } = require("pg");
 const WebSocket = require("ws");
+const jwt = require("jsonwebtoken");
 const { login, verifyToken } = require("./auth");
 require("dotenv").config();
 
@@ -46,17 +47,33 @@ app.post("/auth/login", (req, res) => {
 app.get("/api/sense", verifyToken, async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT COUNT(*) AS detections_last_30min
-      FROM detections
-      WHERE created_at >= NOW() - INTERVAL '30 minutes'
+      SELECT camera_id, timestamp, detection, confidence
+	  FROM camera_data
+	  WHERE timestamp => (
+		SELECT MAX(timestamp) - INTERVAL '7 days'
+		FROM camera_data
+	  )
+	  ORDER BY camera_id, timestamp
     `);
 
-    const detectionsLast30Min = parseInt(result.rows[0].detections_last_30min);
-
-    res.json({
-      message: "Hello, " + req.user.username,
-      stats: { detectionsLast30Min },
-    });
+    const rows = result.rows;
+	
+	const cameras = {};
+	
+	for (const row of rows) {
+		const cam = row.camera_id;
+	
+	if (!cameras[cam]) {
+		cameras[cam] = [];
+	}
+	
+	cameras[cam].push({
+		timestamp: row.timestamp,
+		detection: row.detection,
+		confidence: row.confidence
+	});
+	
+    res.json({ cameras });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Database query failed" });
@@ -72,21 +89,46 @@ app.get("*", (req, res) => {
 
 const server = http.createServer(app);
 
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocket.Server({ noServer: true });
 
-wss.on("connection", (ws) => {
-  console.log("WebSocket client connected");
+// Authenticate WebSocket upgrade requests
+server.on("upgrade", (req, socket, head) => {
+  const url = new URL(req.url, `http://${req.headers.host}`);
+  const token = url.searchParams.get("token");
 
-  // Optional: send initial message
-  ws.send(JSON.stringify({ message: "Connected to WebSocket" }));
+  if (!token) {
+    console.log("WS rejected: No token");
+    socket.destroy();
+    return;
+  }
+
+  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    if (err) {
+      console.log("WS rejected: Invalid token");
+      socket.destroy();
+      return;
+    }
+
+    req.user = decoded;
+
+    wss.handleUpgrade(req, socket, head, (ws) => {
+      wss.emit("connection", ws, req);
+    });
+  });
 });
+
+wss.on("connection", (ws, req) => {
+  console.log("WebSocket client connected:", req.user.username);
+});
+
+	
 
 
 // --- Broadcast helper ---
-function broadcast(stats) {
+function broadcast(data) {
   wss.clients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
-      client.send(JSON.stringify(stats));
+      client.send(JSON.stringify(data));
     }
   });
 }
@@ -97,21 +139,14 @@ pgClient.on("notification", async (msg) => {
 
   try {
     // Query latest stats
-    const result = await pool.query(`
-      SELECT COUNT(*) AS detections_last_30min
-      FROM detections
-      WHERE created_at >= NOW() - INTERVAL '30 minutes'
-    `);
-
-    const stats = { detectionsLast30Min: parseInt(result.rows[0].detections_last_30min) };
-
+    const payload = JSON.parse(msg.payload);
     // Push to all WebSocket clients
-    broadcast(stats);
+    broadcast(payload);
   } catch (err) {
-    console.error("Failed to fetch stats:", err);
+    console.error("Failed to fetch data:", err);
   }
 });
 
-app.listen(process.env.PORT, () =>
-  console.log(`Server running at http://localhost:${process.env.PORT}`)
+app.listen(3000, "0.0.0.0", () =>
+  console.log(`Server listening on port ${3000}`)
 );
