@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from "vue-router";
 import Login from "./views/Login.vue";
 import Dashboard from "./views/Dashboard.vue";
 
+//default routes to login page, and changes page according to token verification
 const router = createRouter({
   history: createWebHistory(),
   routes: [

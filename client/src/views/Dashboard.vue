@@ -67,7 +67,7 @@ export default {
         return;
       }
 
-      // WS URL MUST MATCH YOUR SERVER PORT
+      // WS URL MUST MATCH YOUR SERVER PORT THIS IS IMPORTANT TO CHANGE ACCORDING TO WS ACCESS POINT
       this.ws = new WebSocket(`ws://192.168.45.1:3000?token=${token}`);
 
       this.ws.onopen = () => {
@@ -78,7 +78,7 @@ export default {
         const msg = JSON.parse(event.data);
         console.log("WebSocket message:", msg);
 
-        // Handle data pushed from server
+        // Handle data pushed from server probably doesnt need modification due if following proper json format
         if (!this.cameras[msg.camera_id]) {
 		this.$set(this.cameras, msg.camera_id, []);
 		}
