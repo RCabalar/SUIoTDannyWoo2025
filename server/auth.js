@@ -4,7 +4,7 @@ require("dotenv").config();
 
 //MODIFY THIS/Replace to store this extremely confidential info in the .env file instead, was used for testing
 const USERS = {
-  admin: bcrypt.hashSync("password123", 10),
+  process.env.ADMIN_PASSWORD_HASH: process.env.ADMIN_USERNAME,
 };
 
 function login(username, password) {

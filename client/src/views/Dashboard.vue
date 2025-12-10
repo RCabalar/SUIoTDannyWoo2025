@@ -11,12 +11,6 @@
 			<SensorChart
 				:name="cam"
 				:data="cameras[cam]"
-				metric="detection"
-			/>
-			
-			<SensorChart
-				:name="cam"
-				:data="cameras[cam]"
 				metric="confidence"
 			/>
 		</div>
@@ -33,8 +27,8 @@ export default {
   
   data() {
     return {
-      cameras: {},       // <- store your dynamic camera data
-      ws: null,          // <- websocket reference
+      cameras: {},       // store dynamic camera data
+      ws: null,          // websocket reference
     };
   },
  
@@ -67,7 +61,7 @@ export default {
         return;
       }
 
-      // WS URL MUST MATCH YOUR SERVER PORT THIS IS IMPORTANT TO CHANGE ACCORDING TO WS ACCESS POINT
+      // WS URL MUST MATCH SERVER PORT THIS IS IMPORTANT TO CHANGE ACCORDING TO WS ACCESS POINT
       this.ws = new WebSocket(`ws://192.168.45.1:3000?token=${token}`);
 
       this.ws.onopen = () => {
@@ -85,7 +79,6 @@ export default {
 		
 		this.cameras[msg.camera_id].push({
 			timestamp: msg.timestamp,
-			detection: msg.detection,
 			confidence: msg.confidence
 		});
       };
