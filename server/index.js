@@ -58,7 +58,6 @@ app.get("/api/sense", verifyToken, (req, res) => {
       if (!cameras[item.camera_id]) cameras[item.camera_id] = [];
       cameras[item.camera_id].push({
         timestamp: item.timestamp,
-        detection: item.detection,
         confidence: item.confidence,
       });
     }
